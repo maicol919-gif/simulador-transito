@@ -385,17 +385,24 @@ async function sbPatch(tabla, filtro, body) {
 }
 
 function generarTokenAleatorio(nombre) {
-  const initials = nombre.trim().split(' ')
-    .map(w => w[0]?.toUpperCase() || '')
-    .join('')
-    .substring(0, 2)
-    .padEnd(2, 'X');
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  // Tomar hasta 2 iniciales del nombre
+  const partes = nombre.trim().split(' ').filter(w => w.length > 0);
+  let prefix = '';
+  for (const p of partes) {
+    if (prefix.length < 2) prefix += p[0].toUpperCase();
+  }
+  prefix = prefix.padEnd(2, 'X');
+  // Completar hasta 4 chars con aleatorios
+  while (prefix.length < 4) {
+    prefix += chars[Math.floor(Math.random() * chars.length)];
+  }
+  // Generar 4 chars aleatorios para el sufijo
   let suffix = '';
   for (let i = 0; i < 4; i++) {
     suffix += chars[Math.floor(Math.random() * chars.length)];
   }
-  return `${initials}${suffix.substring(0,2)}-${suffix.substring(2)}`;
+  return `${prefix}-${suffix}`;
 }
 
 async function generarAcceso() {
