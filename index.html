@@ -1,0 +1,778 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Simulador de Tránsito</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0f1a;
+    --surface: #111827;
+    --surface2: #1a2332;
+    --border: rgba(255,255,255,0.08);
+    --border-hover: rgba(255,255,255,0.18);
+    --accent: #3b82f6;
+    --accent-dim: rgba(59,130,246,0.15);
+    --accent-glow: rgba(59,130,246,0.3);
+    --green: #10b981;
+    --green-dim: rgba(16,185,129,0.15);
+    --red: #ef4444;
+    --red-dim: rgba(239,68,68,0.15);
+    --amber: #f59e0b;
+    --amber-dim: rgba(245,158,11,0.15);
+    --text: #f1f5f9;
+    --text-muted: #64748b;
+    --text-dim: #94a3b8;
+    --font: 'DM Sans', sans-serif;
+    --mono: 'DM Mono', monospace;
+    --radius: 12px;
+    --radius-lg: 18px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: var(--font);
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    top: -200px; left: -200px;
+    width: 600px; height: 600px;
+    background: radial-gradient(circle, rgba(59,130,246,0.06) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .screen { display: none; width: 100%; max-width: 520px; }
+  .screen.active { display: block; animation: fadeIn 0.3s ease; }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ── LOGIN ── */
+  .login-wrap { text-align: center; }
+
+  .brand {
+    display: inline-flex; align-items: center; gap: 10px;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 999px; padding: 8px 18px;
+    font-size: 13px; color: var(--text-muted);
+    margin-bottom: 2.5rem;
+  }
+  .brand-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 8px var(--accent-glow);
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    0%,100% { opacity: 1; } 50% { opacity: 0.4; }
+  }
+
+  h1 { font-size: 28px; font-weight: 600; margin-bottom: 8px; letter-spacing: -0.5px; }
+  .subtitle { font-size: 15px; color: var(--text-muted); margin-bottom: 2rem; }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 1.75rem;
+  }
+
+  label { display: block; font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+
+  .token-input {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 18px;
+    font-family: var(--mono);
+    font-size: 20px;
+    font-weight: 500;
+    text-align: center;
+    letter-spacing: 4px;
+    color: var(--text);
+    text-transform: uppercase;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    outline: none;
+  }
+  .token-input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-dim);
+  }
+  .token-input::placeholder { color: var(--text-muted); letter-spacing: 2px; font-size: 16px; }
+
+  .btn {
+    width: 100%; margin-top: 1rem;
+    padding: 14px;
+    background: var(--accent);
+    color: white;
+    border: none; border-radius: var(--radius);
+    font-family: var(--font);
+    font-size: 15px; font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.1s, box-shadow 0.2s;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+  }
+  .btn:hover { background: #2563eb; box-shadow: 0 4px 20px var(--accent-glow); }
+  .btn:active { transform: scale(0.98); }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
+
+  .error-msg { font-size: 13px; color: var(--red); margin-top: 10px; min-height: 18px; text-align: center; }
+  .hint { font-size: 12px; color: var(--text-muted); margin-top: 1.25rem; text-align: center; }
+
+  /* ── NIVELES ── */
+  .levels-header { margin-bottom: 1.5rem; }
+  .welcome { font-size: 22px; font-weight: 600; margin-bottom: 4px; }
+  .min-notice {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: var(--amber-dim); border: 1px solid rgba(245,158,11,0.3);
+    border-radius: 999px; padding: 4px 12px;
+    font-size: 12px; color: var(--amber); margin-top: 8px;
+  }
+
+  .levels-grid { display: flex; flex-direction: column; gap: 10px; margin-bottom: 1.25rem; }
+
+  .level-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.1rem 1.25rem;
+    display: flex; align-items: center; gap: 14px;
+    transition: border-color 0.2s;
+  }
+  .level-card.current { border-color: var(--accent); background: var(--accent-dim); }
+  .level-card.done { border-color: rgba(16,185,129,0.4); }
+  .level-card.locked { opacity: 0.45; }
+
+  .level-num {
+    width: 40px; height: 40px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; flex-shrink: 0;
+    background: var(--surface2);
+  }
+  .level-card.current .level-num { background: var(--accent); }
+  .level-card.done .level-num { background: var(--green-dim); }
+
+  .level-info { flex: 1; }
+  .level-title { font-size: 15px; font-weight: 500; }
+  .level-sub { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+
+  .level-status { font-size: 12px; font-weight: 500; }
+  .level-status.done { color: var(--green); }
+  .level-status.current { color: var(--accent); }
+  .level-status.locked { color: var(--text-muted); }
+
+  .score-pill {
+    font-family: var(--mono); font-size: 14px; font-weight: 500;
+    padding: 3px 10px; border-radius: 999px;
+  }
+  .score-pill.pass { background: var(--green-dim); color: var(--green); }
+  .score-pill.fail { background: var(--red-dim); color: var(--red); }
+
+  .btn-outline {
+    width: 100%; padding: 13px;
+    background: transparent;
+    color: var(--accent);
+    border: 1px solid var(--accent);
+    border-radius: var(--radius);
+    font-family: var(--font); font-size: 15px; font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+  }
+  .btn-outline:hover { background: var(--accent-dim); }
+
+  /* ── QUIZ ── */
+  .quiz-top {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 1.5rem;
+  }
+  .quiz-level-tag {
+    font-size: 12px; font-weight: 500; color: var(--accent);
+    background: var(--accent-dim); padding: 4px 12px;
+    border-radius: 999px; text-transform: uppercase; letter-spacing: 0.5px;
+  }
+  .quiz-counter { font-family: var(--mono); font-size: 13px; color: var(--text-muted); }
+
+  .progress-track {
+    height: 3px; background: var(--surface2);
+    border-radius: 2px; margin-bottom: 2rem; overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%; background: var(--accent);
+    border-radius: 2px; transition: width 0.4s ease;
+  }
+
+  .question-text {
+    font-size: 18px; font-weight: 500; line-height: 1.55;
+    margin-bottom: 1.5rem; color: var(--text);
+  }
+
+  .options { display: flex; flex-direction: column; gap: 10px; }
+
+  .opt-btn {
+    width: 100%; text-align: left;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    display: flex; align-items: center; gap: 14px;
+    font-family: var(--font); font-size: 15px; color: var(--text);
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .opt-btn:hover:not(:disabled) {
+    border-color: var(--border-hover);
+    background: var(--surface2);
+  }
+  .opt-btn:disabled { cursor: default; }
+  .opt-btn.correct { border-color: var(--green); background: var(--green-dim); color: var(--green); }
+  .opt-btn.wrong { border-color: var(--red); background: var(--red-dim); color: var(--red); }
+
+  .opt-letter {
+    width: 30px; height: 30px; border-radius: 8px;
+    background: var(--surface2);
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--mono); font-size: 13px; font-weight: 500;
+    flex-shrink: 0; color: var(--text-dim);
+    transition: background 0.15s, color 0.15s;
+  }
+  .opt-btn.correct .opt-letter { background: rgba(16,185,129,0.3); color: var(--green); }
+  .opt-btn.wrong .opt-letter { background: rgba(239,68,68,0.3); color: var(--red); }
+
+  .feedback {
+    margin-top: 1rem; padding: 12px 16px;
+    border-radius: var(--radius); font-size: 14px;
+    display: none; align-items: center; gap: 10px;
+  }
+  .feedback.show { display: flex; }
+  .feedback.ok { background: var(--green-dim); color: var(--green); border: 1px solid rgba(16,185,129,0.25); }
+  .feedback.fail { background: var(--red-dim); color: var(--red); border: 1px solid rgba(239,68,68,0.25); }
+
+  .btn-next {
+    margin-top: 1rem; padding: 12px 24px;
+    background: var(--accent); color: white;
+    border: none; border-radius: var(--radius);
+    font-family: var(--font); font-size: 14px; font-weight: 500;
+    cursor: pointer; display: none;
+    transition: background 0.2s;
+  }
+  .btn-next.show { display: inline-flex; align-items: center; gap: 6px; }
+  .btn-next:hover { background: #2563eb; }
+
+  /* ── RESULTADO ── */
+  .result-wrap { text-align: center; }
+  .result-icon { font-size: 52px; margin-bottom: 1rem; }
+  .result-pct {
+    font-family: var(--mono); font-size: 64px; font-weight: 500;
+    line-height: 1; margin-bottom: 0.5rem;
+  }
+  .result-pct.pass { color: var(--green); }
+  .result-pct.fail { color: var(--red); }
+  .result-sub { font-size: 15px; color: var(--text-muted); margin-bottom: 1.5rem; }
+  .result-detail {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 1rem 1.25rem;
+    font-size: 13px; color: var(--text-dim); margin-bottom: 1.5rem;
+  }
+
+  /* ── FINAL ── */
+  .final-wrap { text-align: center; }
+  .trophy { font-size: 64px; margin-bottom: 1rem; }
+  .final-scores {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 1.25rem;
+    margin: 1.5rem 0; text-align: left;
+  }
+  .score-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 8px 0; border-bottom: 1px solid var(--border);
+    font-size: 14px;
+  }
+  .score-row:last-child { border-bottom: none; }
+  .score-row-label { color: var(--text-dim); }
+
+  /* ── LOADING ── */
+  .loading {
+    display: flex; align-items: center; justify-content: center;
+    gap: 10px; padding: 2rem; color: var(--text-muted); font-size: 14px;
+  }
+  .spinner {
+    width: 18px; height: 18px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  @media (max-width: 480px) {
+    h1 { font-size: 24px; }
+    .result-pct { font-size: 52px; }
+    .question-text { font-size: 16px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="s-login" class="screen active">
+  <div class="login-wrap">
+    <div class="brand">
+      <div class="brand-dot"></div>
+      Plataforma de simulación
+    </div>
+    <h1>Simulador de tránsito</h1>
+    <p class="subtitle">Ingresa tu código de acceso para comenzar</p>
+    <div class="card">
+      <label for="token-in">Código de acceso</label>
+      <input id="token-in" class="token-input" type="text" maxlength="9" placeholder="XXXX-XXXX" autocomplete="off">
+      <button class="btn" onclick="validarToken()">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        Ingresar
+      </button>
+      <p id="login-err" class="error-msg"></p>
+    </div>
+    <p class="hint">¿No tienes código? Contáctanos para activar tu acceso.</p>
+  </div>
+</div>
+
+<!-- NIVELES -->
+<div id="s-levels" class="screen">
+  <div class="levels-header">
+    <div class="welcome">Hola, <span id="alumno-nombre"></span> 👋</div>
+    <div class="min-notice">
+      <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
+      Mínimo 70% para avanzar al siguiente nivel
+    </div>
+  </div>
+  <div class="levels-grid" id="levels-grid"></div>
+  <button class="btn-outline" id="btn-iniciar" onclick="iniciarNivel()">
+    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+    <span id="btn-iniciar-txt">Comenzar nivel inicial</span>
+  </button>
+</div>
+
+<!-- QUIZ -->
+<div id="s-quiz" class="screen">
+  <div class="quiz-top">
+    <span class="quiz-level-tag" id="quiz-tag"></span>
+    <span class="quiz-counter" id="quiz-counter"></span>
+  </div>
+  <div class="progress-track"><div class="progress-fill" id="prog-fill" style="width:0%"></div></div>
+  <p class="question-text" id="q-text"></p>
+  <div class="options" id="opts"></div>
+  <div class="feedback" id="feedback">
+    <span id="feedback-txt"></span>
+  </div>
+  <button class="btn-next" id="btn-next" onclick="siguientePregunta()">
+    Siguiente
+    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+  </button>
+</div>
+
+<!-- RESULTADO -->
+<div id="s-result" class="screen">
+  <div class="result-wrap">
+    <div class="result-icon" id="r-icon"></div>
+    <div class="result-pct" id="r-pct"></div>
+    <div class="result-sub" id="r-sub"></div>
+    <div class="result-detail" id="r-detail"></div>
+    <button class="btn" id="r-btn" onclick="continuarFlujo()"></button>
+  </div>
+</div>
+
+<!-- FINAL -->
+<div id="s-final" class="screen">
+  <div class="final-wrap">
+    <div class="trophy">🏆</div>
+    <h1>¡Felicitaciones!</h1>
+    <p class="subtitle" style="margin-top:8px;">Completaste los 3 niveles del simulador.<br>Estás listo para el examen oficial.</p>
+    <div class="final-scores" id="final-scores"></div>
+    <p style="font-size:13px;color:var(--text-muted);">Guarda una captura como comprobante de tu progreso.</p>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════
+// CONFIGURACIÓN — reemplaza estos valores
+// ═══════════════════════════════════════
+const SUPABASE_URL = 'https://tmnoziwwmvolduzbhzoo.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_kyKZKsVe03Lstv7MJCFneQ_qvs2Z9QF';
+const MIN_PASS = 70;
+const PREGUNTAS_POR_NIVEL = [15, 20, 25]; // inicial, practica, final
+
+// ═══════════════════════════════════════
+// ESTADO
+// ═══════════════════════════════════════
+let state = {
+  tokenData: null,
+  alumnoNombre: '',
+  nivelActual: 0,
+  preguntas: [],
+  qIndex: 0,
+  correctas: 0,
+  respondida: false,
+  scores: [null, null, null]
+};
+
+// ═══════════════════════════════════════
+// HELPERS API
+// ═══════════════════════════════════════
+async function sbGet(tabla, filtros = '') {
+  const r = await fetch(`${SUPABASE_URL}/rest/v1/${tabla}?${filtros}`, {
+    headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
+  });
+  return r.json();
+}
+
+async function sbPatch(tabla, filtro, body) {
+  await fetch(`${SUPABASE_URL}/rest/v1/${tabla}?${filtro}`, {
+    method: 'PATCH',
+    headers: {
+      'apikey': SUPABASE_KEY,
+      'Authorization': `Bearer ${SUPABASE_KEY}`,
+      'Content-Type': 'application/json',
+      'Prefer': 'return=minimal'
+    },
+    body: JSON.stringify(body)
+  });
+}
+
+async function sbPost(tabla, body) {
+  await fetch(`${SUPABASE_URL}/rest/v1/${tabla}`, {
+    method: 'POST',
+    headers: {
+      'apikey': SUPABASE_KEY,
+      'Authorization': `Bearer ${SUPABASE_KEY}`,
+      'Content-Type': 'application/json',
+      'Prefer': 'return=minimal'
+    },
+    body: JSON.stringify(body)
+  });
+}
+
+// ═══════════════════════════════════════
+// PANTALLAS
+// ═══════════════════════════════════════
+function mostrar(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('s-' + id).classList.add('active');
+}
+
+// ═══════════════════════════════════════
+// LOGIN
+// ═══════════════════════════════════════
+document.getElementById('token-in').addEventListener('input', function() {
+  let v = this.value.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+  if (v.length > 4) v = v.slice(0, 4) + '-' + v.slice(4, 8);
+  this.value = v;
+});
+document.getElementById('token-in').addEventListener('keydown', e => {
+  if (e.key === 'Enter') validarToken();
+});
+
+async function validarToken() {
+  const raw = document.getElementById('token-in').value.trim();
+  const err = document.getElementById('login-err');
+  err.textContent = '';
+  if (raw.length < 9) { err.textContent = 'Ingresa el código completo (XXXX-XXXX).'; return; }
+
+  const btn = document.querySelector('#s-login .btn');
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spinner"></div> Verificando...';
+
+  try {
+    const rows = await sbGet('tokens', `token=eq.${raw}&select=*,alumnos(nombre)`);
+    if (!rows || rows.length === 0) {
+      err.textContent = 'Código no encontrado. Verifica e intenta de nuevo.';
+    } else if (!rows[0].activo) {
+      err.textContent = 'Este código ha sido desactivado. Contacta al instructor.';
+    } else {
+      state.tokenData = rows[0];
+      state.alumnoNombre = rows[0].alumnos?.nombre || 'Alumno';
+      state.nivelActual = rows[0].nivel_actual || 0;
+      state.scores = [rows[0].score_nivel_0, rows[0].score_nivel_1, rows[0].score_nivel_2];
+
+      await sbPatch('tokens', `id=eq.${rows[0].id}`, {
+        primer_acceso: rows[0].primer_acceso || new Date().toISOString(),
+        ultimo_acceso: new Date().toISOString()
+      });
+
+      cargarPantallaLevels();
+      mostrar('levels');
+    }
+  } catch(e) {
+    err.textContent = 'Error de conexión. Intenta de nuevo.';
+  }
+
+  btn.disabled = false;
+  btn.innerHTML = '<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg> Ingresar';
+}
+
+// ═══════════════════════════════════════
+// PANTALLA DE NIVELES
+// ═══════════════════════════════════════
+const NIVEL_INFO = [
+  { nombre: 'Nivel inicial', sub: 'Conceptos básicos de tránsito', emoji: '📘' },
+  { nombre: 'Práctica', sub: 'Casos y situaciones aplicadas', emoji: '📝' },
+  { nombre: 'Examen final', sub: 'Preguntas del examen real', emoji: '🎯' }
+];
+
+function cargarPantallaLevels() {
+  document.getElementById('alumno-nombre').textContent = state.alumnoNombre.split(' ')[0];
+  const grid = document.getElementById('levels-grid');
+  grid.innerHTML = '';
+
+  for (let i = 0; i < 3; i++) {
+    const info = NIVEL_INFO[i];
+    const score = state.scores[i];
+    const isDone = score !== null && score >= MIN_PASS;
+    const isCurrent = i === state.nivelActual && !isDone;
+    const isLocked = i > state.nivelActual;
+
+    let statusHTML = '';
+    let scoreHTML = '';
+
+    if (isDone) {
+      statusHTML = `<span class="level-status done">Completado</span>`;
+      scoreHTML = `<span class="score-pill pass">${score}%</span>`;
+    } else if (isCurrent) {
+      statusHTML = `<span class="level-status current">Activo</span>`;
+    } else if (isLocked) {
+      statusHTML = `<span class="level-status locked">Bloqueado</span>`;
+    } else if (score !== null) {
+      statusHTML = `<span class="level-status" style="color:var(--red)">No aprobado</span>`;
+      scoreHTML = `<span class="score-pill fail">${score}%</span>`;
+    }
+
+    const cls = isDone ? 'done' : isCurrent ? 'current' : isLocked ? 'locked' : '';
+
+    grid.innerHTML += `
+      <div class="level-card ${cls}">
+        <div class="level-num">${isDone ? '✅' : isLocked ? '🔒' : info.emoji}</div>
+        <div class="level-info">
+          <div class="level-title">${info.nombre}</div>
+          <div class="level-sub">${info.sub}</div>
+          ${statusHTML}
+        </div>
+        ${scoreHTML}
+      </div>`;
+  }
+
+  const allDone = state.scores.every((s, i) => s !== null && s >= MIN_PASS);
+  const btnIniciar = document.getElementById('btn-iniciar');
+  if (allDone) {
+    btnIniciar.style.display = 'none';
+    mostrar('final');
+    mostrarFinal();
+  } else {
+    btnIniciar.style.display = 'flex';
+    document.getElementById('btn-iniciar-txt').textContent =
+      `Comenzar ${NIVEL_INFO[state.nivelActual].nombre.toLowerCase()}`;
+  }
+}
+
+// ═══════════════════════════════════════
+// QUIZ
+// ═══════════════════════════════════════
+async function iniciarNivel() {
+  mostrar('quiz');
+  document.getElementById('opts').innerHTML = '<div class="loading"><div class="spinner"></div> Cargando preguntas...</div>';
+  document.getElementById('q-text').textContent = '';
+  document.getElementById('feedback').className = 'feedback';
+  document.getElementById('btn-next').className = 'btn-next';
+
+  const limite = PREGUNTAS_POR_NIVEL[state.nivelActual];
+  const total = await sbGet('preguntas', `nivel=eq.${state.nivelActual}&activa=eq.true&select=id`);
+  const todas = await sbGet('preguntas', `nivel=eq.${state.nivelActual}&activa=eq.true`);
+
+  if (!todas || todas.length === 0) {
+    document.getElementById('q-text').textContent = 'No hay preguntas disponibles para este nivel. Contacta al instructor.';
+    document.getElementById('opts').innerHTML = '';
+    return;
+  }
+
+  const shuffled = todas.sort(() => Math.random() - 0.5);
+  state.preguntas = shuffled.slice(0, Math.min(limite, shuffled.length));
+  state.qIndex = 0;
+  state.correctas = 0;
+  state.respondida = false;
+
+  document.getElementById('quiz-tag').textContent = NIVEL_INFO[state.nivelActual].nombre;
+  renderPregunta();
+}
+
+function renderPregunta() {
+  const q = state.preguntas[state.qIndex];
+  const total = state.preguntas.length;
+  const pct = (state.qIndex / total) * 100;
+
+  document.getElementById('quiz-counter').textContent = `${state.qIndex + 1} / ${total}`;
+  document.getElementById('prog-fill').style.width = pct + '%';
+  document.getElementById('q-text').textContent = q.pregunta;
+
+  const letras = ['A', 'B', 'C', 'D'];
+  const opciones = [q.opcion_a, q.opcion_b, q.opcion_c, q.opcion_d];
+  const container = document.getElementById('opts');
+  container.innerHTML = '';
+
+  opciones.forEach((op, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'opt-btn';
+    btn.innerHTML = `<span class="opt-letter">${letras[i]}</span>${op}`;
+    btn.onclick = () => seleccionar(i, q.correcta);
+    container.appendChild(btn);
+  });
+
+  document.getElementById('feedback').className = 'feedback';
+  document.getElementById('btn-next').className = 'btn-next';
+  state.respondida = false;
+}
+
+function seleccionar(elegida, correctaLetra) {
+  if (state.respondida) return;
+  state.respondida = true;
+
+  const letras = ['A', 'B', 'C', 'D'];
+  const correctaIdx = letras.indexOf(correctaLetra);
+  const btns = document.querySelectorAll('.opt-btn');
+
+  btns.forEach((b, i) => {
+    b.disabled = true;
+    if (i === correctaIdx) b.classList.add('correct');
+    if (i === elegida && elegida !== correctaIdx) b.classList.add('wrong');
+  });
+
+  const fb = document.getElementById('feedback');
+  const ft = document.getElementById('feedback-txt');
+
+  if (elegida === correctaIdx) {
+    state.correctas++;
+    fb.className = 'feedback show ok';
+    ft.textContent = '✓ ¡Correcto!';
+  } else {
+    fb.className = 'feedback show fail';
+    ft.textContent = `✗ La respuesta correcta es la opción ${correctaLetra}.`;
+  }
+
+  document.getElementById('btn-next').className = 'btn-next show';
+}
+
+function siguientePregunta() {
+  state.qIndex++;
+  if (state.qIndex >= state.preguntas.length) {
+    mostrarResultado();
+  } else {
+    renderPregunta();
+  }
+}
+
+// ═══════════════════════════════════════
+// RESULTADO
+// ═══════════════════════════════════════
+async function mostrarResultado() {
+  const total = state.preguntas.length;
+  const pct = Math.round((state.correctas / total) * 100);
+  const aprobado = pct >= MIN_PASS;
+
+  state.scores[state.nivelActual] = pct;
+
+  // Guardar en Supabase
+  const campo = `score_nivel_${state.nivelActual}`;
+  const intentoCampo = `intentos_nivel_${state.nivelActual}`;
+  const intentosActuales = state.tokenData[intentoCampo] || 0;
+
+  await sbPatch('tokens', `id=eq.${state.tokenData.id}`, {
+    [campo]: pct,
+    [intentoCampo]: intentosActuales + 1,
+    nivel_actual: aprobado ? Math.max(state.nivelActual + 1, state.tokenData.nivel_actual || 0) : state.nivelActual,
+    ultimo_acceso: new Date().toISOString()
+  });
+
+  await sbPost('resultados', {
+    token_id: state.tokenData.id,
+    nivel: state.nivelActual,
+    score: pct,
+    total_preguntas: total,
+    correctas: state.correctas,
+    aprobado
+  });
+
+  if (aprobado) state.nivelActual = Math.min(state.nivelActual + 1, 2);
+
+  document.getElementById('r-icon').textContent = aprobado ? '🎉' : '😔';
+  document.getElementById('r-pct').textContent = pct + '%';
+  document.getElementById('r-pct').className = 'result-pct ' + (aprobado ? 'pass' : 'fail');
+
+  if (aprobado && state.nivelActual > 2) {
+    document.getElementById('r-sub').textContent = '¡Completaste el simulador!';
+    document.getElementById('r-btn').textContent = 'Ver resumen final';
+  } else if (aprobado) {
+    document.getElementById('r-sub').textContent = `¡Aprobado! Puedes continuar al ${NIVEL_INFO[state.nivelActual].nombre.toLowerCase()}.`;
+    document.getElementById('r-btn').textContent = 'Continuar';
+  } else {
+    document.getElementById('r-sub').textContent = `Necesitas ${MIN_PASS}% para avanzar. ¡Inténtalo de nuevo!`;
+    document.getElementById('r-btn').textContent = 'Reintentar nivel';
+  }
+
+  document.getElementById('r-detail').textContent =
+    `${state.correctas} de ${total} preguntas correctas`;
+
+  mostrar('result');
+}
+
+function continuarFlujo() {
+  const pct = state.scores[state.nivelActual - 1] ?? state.scores[state.nivelActual];
+  const aprobado = pct >= MIN_PASS;
+
+  if (!aprobado) {
+    iniciarNivel();
+    return;
+  }
+
+  const allDone = state.scores.slice(0, 3).every((s, i) => {
+    const nivel = NIVEL_INFO[i];
+    return s !== null && s >= MIN_PASS;
+  });
+
+  if (state.nivelActual >= 3 || allDone) {
+    mostrar('final');
+    mostrarFinal();
+  } else {
+    cargarPantallaLevels();
+    mostrar('levels');
+  }
+}
+
+function mostrarFinal() {
+  const nombres = NIVEL_INFO.map(n => n.nombre);
+  const container = document.getElementById('final-scores');
+  container.innerHTML = '<div style="font-size:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">Resumen de resultados</div>';
+  state.scores.forEach((s, i) => {
+    if (s !== null) {
+      const aprobado = s >= MIN_PASS;
+      container.innerHTML += `
+        <div class="score-row">
+          <span class="score-row-label">${nombres[i]}</span>
+          <span class="score-pill ${aprobado ? 'pass' : 'fail'}">${s}%</span>
+        </div>`;
+    }
+  });
+}
+</script>
+</body>
+</html>
