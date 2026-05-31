@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Admin — Simulador de Tránsito</title>
+<title>Admin — Simulador Examen Teórico</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -268,7 +268,7 @@
   <div class="top-bar">
     <div class="brand">
       <div class="brand-dot"></div>
-      Simulador de tránsito
+      Simulador Examen Teórico
     </div>
     <span class="admin-badge">⚙ Panel admin</span>
   </div>
@@ -349,7 +349,7 @@
 <script>
 const SUPABASE_URL = 'https://tmnoziwwmvolduzbhzoo.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_kyKZKsVe03Lstv7MJCFneQ_qvs2Z9QF';
-const SIMULADOR_URL = 'https://maicol919-gif.github.io/simulador-transito/';
+const SIMULADOR_URL = 'https://simulador-examen-conduccion.netlify.app';
 
 async function sbGet(tabla, filtros = '') {
   const r = await fetch(`${SUPABASE_URL}/rest/v1/${tabla}?${filtros}`, {
