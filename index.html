@@ -403,6 +403,10 @@
     <p class="subtitle" style="margin-top:8px;">Completaste los 3 niveles del simulador.<br>Estás listo para el examen oficial.</p>
     <div class="final-scores" id="final-scores"></div>
     <p style="font-size:13px;color:var(--text-muted);">Guarda una captura como comprobante de tu progreso.</p>
+    <button class="btn" id="btn-repetir-final" onclick="repetirExamenFinal()" style="margin-top:20px;background:var(--surface2);color:var(--text);border:1px solid var(--border);">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M1 4v6h6"/><path d="M3.51 15a9 9 0 1 0 .49-4.5"/></svg>
+      Repetir Examen Final
+    </button>
   </div>
 </div>
 
@@ -598,11 +602,12 @@ function cargarPantallaLevels() {
   const allDone = state.scores.every((s, i) => s !== null && s >= MIN_PASS);
   const btnIniciar = document.getElementById('btn-iniciar');
   if (allDone) {
-    btnIniciar.style.display = 'none';
-    mostrar('final');
-    mostrarFinal();
+    btnIniciar.style.display = 'flex';
+    document.getElementById('btn-iniciar-txt').textContent = 'Repetir Examen Final';
+    btnIniciar.onclick = repetirExamenFinal;
   } else {
     btnIniciar.style.display = 'flex';
+    btnIniciar.onclick = iniciarNivel;
     document.getElementById('btn-iniciar-txt').textContent =
       `Comenzar ${NIVEL_INFO[state.nivelActual].nombre.toLowerCase()}`;
   }
@@ -734,15 +739,22 @@ async function mostrarResultado() {
     aprobado
   });
 
-  if (aprobado) state.nivelActual = Math.min(state.nivelActual + 1, 2);
+  const eraFinalRepetido = state.scores[2] !== null && state.scores[2] >= MIN_PASS && state.nivelActual === 2;
+
+  if (aprobado) state.nivelActual = Math.min(state.nivelActual + 1, 3);
 
   document.getElementById('r-icon').textContent = aprobado ? '🎉' : '😔';
   document.getElementById('r-pct').textContent = pct + '%';
   document.getElementById('r-pct').className = 'result-pct ' + (aprobado ? 'pass' : 'fail');
 
-  if (aprobado && state.nivelActual > 2) {
-    document.getElementById('r-sub').textContent = '¡Completaste el simulador!';
-    document.getElementById('r-btn').textContent = 'Ver resumen final';
+  if (aprobado && state.nivelActual >= 3) {
+    if (eraFinalRepetido) {
+      document.getElementById('r-sub').textContent = '¡Excelente! Seguís en forma para el examen oficial.';
+      document.getElementById('r-btn').textContent = 'Ver resumen';
+    } else {
+      document.getElementById('r-sub').textContent = '¡Completaste el simulador!';
+      document.getElementById('r-btn').textContent = 'Ver resumen final';
+    }
   } else if (aprobado) {
     document.getElementById('r-sub').textContent = `¡Aprobado! Puedes continuar al ${NIVEL_INFO[state.nivelActual].nombre.toLowerCase()}.`;
     document.getElementById('r-btn').textContent = 'Continuar';
@@ -758,7 +770,7 @@ async function mostrarResultado() {
 }
 
 function continuarFlujo() {
-  const pct = state.scores[state.nivelActual - 1] ?? state.scores[state.nivelActual];
+  const pct = state.scores[Math.min(state.nivelActual - 1, 2)] ?? state.scores[state.nivelActual];
   const aprobado = pct >= MIN_PASS;
 
   if (!aprobado) {
@@ -766,10 +778,7 @@ function continuarFlujo() {
     return;
   }
 
-  const allDone = state.scores.slice(0, 3).every((s, i) => {
-    const nivel = NIVEL_INFO[i];
-    return s !== null && s >= MIN_PASS;
-  });
+  const allDone = state.scores.slice(0, 3).every((s) => s !== null && s >= MIN_PASS);
 
   if (state.nivelActual >= 3 || allDone) {
     mostrar('final');
@@ -778,6 +787,13 @@ function continuarFlujo() {
     cargarPantallaLevels();
     mostrar('levels');
   }
+}
+
+function repetirExamenFinal() {
+  // Repetir solo el nivel 2 (Examen final) con nuevas preguntas aleatorias
+  // Sin resetear el progreso guardado en Supabase
+  state.nivelActual = 2;
+  iniciarNivel();
 }
 
 function mostrarFinal() {
@@ -798,3 +814,4 @@ function mostrarFinal() {
 </script>
 </body>
 </html>
+
