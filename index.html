@@ -416,6 +416,20 @@ const MIN_PASS = 70;
 const PREGUNTAS_POR_NIVEL = [15, 20, 25]; // inicial, practica, final
 
 // ═══════════════════════════════════════
+// DEVICE ID
+// ═══════════════════════════════════════
+function getDeviceId() {
+  let id = localStorage.getItem('sim_device_id');
+  if (!id) {
+    id = 'DEV-' + Math.random().toString(36).substring(2, 10).toUpperCase()
+       + '-' + Date.now().toString(36).toUpperCase();
+    localStorage.setItem('sim_device_id', id);
+  }
+  return id;
+}
+const DEVICE_ID = getDeviceId();
+
+// ═══════════════════════════════════════
 // ESTADO
 // ═══════════════════════════════════════
 let state = {
@@ -501,16 +515,24 @@ async function validarToken() {
       err.textContent = 'Código no encontrado. Verifica e intenta de nuevo.';
     } else if (!rows[0].activo) {
       err.textContent = 'Este código ha sido desactivado. Contacta al instructor.';
+    } else if (rows[0].expira_at && new Date(rows[0].expira_at) < new Date()) {
+      err.textContent = 'Tu acceso ha expirado. Contacta al instructor para renovarlo.';
+    } else if (rows[0].device_id && rows[0].device_id !== DEVICE_ID) {
+      err.textContent = 'Este código ya está vinculado a otro dispositivo. Contacta al instructor.';
     } else {
+      // Vincular dispositivo si es la primera vez
+      const updates = {
+        ultimo_acceso: new Date().toISOString()
+      };
+      if (!rows[0].primer_acceso) updates.primer_acceso = new Date().toISOString();
+      if (!rows[0].device_id) updates.device_id = DEVICE_ID;
+
       state.tokenData = rows[0];
       state.alumnoNombre = rows[0].alumnos?.nombre || 'Alumno';
       state.nivelActual = rows[0].nivel_actual || 0;
       state.scores = [rows[0].score_nivel_0, rows[0].score_nivel_1, rows[0].score_nivel_2];
 
-      await sbPatch('tokens', `id=eq.${rows[0].id}`, {
-        primer_acceso: rows[0].primer_acceso || new Date().toISOString(),
-        ultimo_acceso: new Date().toISOString()
-      });
+      await sbPatch('tokens', `id=eq.${rows[0].id}`, updates);
 
       cargarPantallaLevels();
       mostrar('levels');
