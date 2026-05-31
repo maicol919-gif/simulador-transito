@@ -289,6 +289,21 @@
     font-size: 13px; color: var(--text-dim); margin-bottom: 1.5rem;
   }
 
+  /* ── REPASO ── */
+  .repaso-item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 16px;
+    margin-bottom: 12px;
+    text-align: left;
+  }
+  .repaso-pregunta { font-size:14px; font-weight:600; margin-bottom:8px; line-height:1.4; }
+  .repaso-row { font-size:12px; margin-bottom:3px; }
+  .repaso-wrong { color: var(--red); }
+  .repaso-correct { color: var(--green); }
+  .repaso-exp { font-size:12px; color:var(--text-muted); margin-top:6px; padding-top:6px; border-top:1px solid var(--border); line-height:1.4; }
+
   /* ── FINAL ── */
   .final-wrap { text-align: center; }
   .trophy { font-size: 64px; margin-bottom: 1rem; }
@@ -377,11 +392,22 @@
   <div class="options" id="opts"></div>
   <div class="feedback" id="feedback">
     <span id="feedback-txt"></span>
+    <span id="feedback-exp" style="display:block;font-size:12px;margin-top:4px;opacity:0.85;font-weight:400;"></span>
   </div>
   <button class="btn-next" id="btn-next" onclick="siguientePregunta()">
     Siguiente
     <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
   </button>
+</div>
+
+<!-- REPASO -->
+<div id="s-repaso" class="screen">
+  <div style="max-width:520px;margin:0 auto;width:100%;">
+    <h2 style="font-size:18px;margin-bottom:4px;">📋 Repaso de errores</h2>
+    <p style="font-size:13px;color:var(--text-muted);margin-bottom:20px;">Estas son las preguntas que respondiste incorrectamente.</p>
+    <div id="repaso-list"></div>
+    <button class="btn" id="repaso-btn" onclick="continuarFlujo()" style="margin-top:24px;width:100%;"></button>
+  </div>
 </div>
 
 <!-- RESULTADO -->
@@ -638,6 +664,7 @@ async function iniciarNivel() {
   state.qIndex = 0;
   state.correctas = 0;
   state.respondida = false;
+  state.errores = [];
 
   document.getElementById('quiz-tag').textContent = NIVEL_INFO[state.nivelActual].nombre;
   renderPregunta();
@@ -677,6 +704,7 @@ function seleccionar(elegida, correctaLetra) {
   const letras = ['A', 'B', 'C', 'D'];
   const correctaIdx = letras.indexOf(correctaLetra);
   const btns = document.querySelectorAll('.opt-btn');
+  const q = state.preguntas[state.qIndex];
 
   btns.forEach((b, i) => {
     b.disabled = true;
@@ -686,14 +714,26 @@ function seleccionar(elegida, correctaLetra) {
 
   const fb = document.getElementById('feedback');
   const ft = document.getElementById('feedback-txt');
+  const fe = document.getElementById('feedback-exp');
 
   if (elegida === correctaIdx) {
     state.correctas++;
     fb.className = 'feedback show ok';
     ft.textContent = '✓ ¡Correcto!';
+    fe.textContent = q.explicacion || '';
   } else {
     fb.className = 'feedback show fail';
     ft.textContent = `✗ La respuesta correcta es la opción ${correctaLetra}.`;
+    fe.textContent = q.explicacion || '';
+    // Guardar para repaso
+    state.errores = state.errores || [];
+    state.errores.push({
+      pregunta: q.pregunta,
+      elegida: letras[elegida],
+      correcta: correctaLetra,
+      texto_correcta: [q.opcion_a, q.opcion_b, q.opcion_c, q.opcion_d][correctaIdx],
+      explicacion: q.explicacion || ''
+    });
   }
 
   document.getElementById('btn-next').className = 'btn-next show';
@@ -766,6 +806,18 @@ async function mostrarResultado() {
   document.getElementById('r-detail').textContent =
     `${state.correctas} de ${total} preguntas correctas`;
 
+  // Botón de repaso si hubo errores
+  const errores = state.errores || [];
+  const rDetailEl = document.getElementById('r-detail');
+  if (errores.length > 0) {
+    rDetailEl.innerHTML = `${state.correctas} de ${total} preguntas correctas
+      <br><button onclick="mostrarRepaso()" style="margin-top:10px;font-size:12px;padding:6px 14px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);cursor:pointer;">
+        📋 Ver ${errores.length} pregunta${errores.length > 1 ? 's' : ''} fallada${errores.length > 1 ? 's' : ''}
+      </button>`;
+  } else {
+    rDetailEl.textContent = `${state.correctas} de ${total} preguntas correctas`;
+  }
+
   mostrar('result');
 }
 
@@ -787,6 +839,26 @@ function continuarFlujo() {
     cargarPantallaLevels();
     mostrar('levels');
   }
+}
+
+function mostrarRepaso() {
+  const errores = state.errores || [];
+  const list = document.getElementById('repaso-list');
+  list.innerHTML = '';
+  errores.forEach((e, i) => {
+    list.innerHTML += `
+      <div class="repaso-item">
+        <div class="repaso-pregunta">${i + 1}. ${e.pregunta}</div>
+        <div class="repaso-row repaso-wrong">✗ Tu respuesta: ${e.elegida} — ${[null,null,null,null][0] || ''}</div>
+        <div class="repaso-row repaso-correct">✓ Correcta: ${e.correcta} — ${e.texto_correcta}</div>
+        ${e.explicacion ? `<div class="repaso-exp">💡 ${e.explicacion}</div>` : ''}
+      </div>`;
+  });
+  // Texto del botón de acción
+  const pct = state.scores[Math.min(state.nivelActual - 1, 2)] ?? state.scores[state.nivelActual];
+  const aprobado = pct >= MIN_PASS;
+  document.getElementById('repaso-btn').textContent = aprobado ? 'Continuar →' : 'Reintentar nivel';
+  mostrar('repaso');
 }
 
 function repetirExamenFinal() {
