@@ -348,6 +348,26 @@
   <!-- Resumen rápido -->
   <div id="resumen-stats" style="display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap;"></div>
 
+  <!-- Filtros -->
+  <div id="filtros-bar" style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center;">
+    <input id="filtro-buscar" type="text" placeholder="🔍 Buscar por nombre o código..." oninput="aplicarFiltros()"
+      style="flex:1;min-width:180px;padding:7px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;outline:none;">
+    <select id="filtro-estado" onchange="aplicarFiltros()"
+      style="padding:7px 10px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;cursor:pointer;">
+      <option value="activo">Solo activos</option>
+      <option value="todos">Todos</option>
+      <option value="inactivo">Solo inactivos</option>
+    </select>
+    <select id="filtro-nivel" onchange="aplicarFiltros()"
+      style="padding:7px 10px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;cursor:pointer;">
+      <option value="todos">Todos los niveles</option>
+      <option value="0">En nivel inicial</option>
+      <option value="1">En práctica</option>
+      <option value="2">En examen final</option>
+      <option value="3">Completaron</option>
+    </select>
+  </div>
+
   <div class="table-wrap">
     <table>
       <thead>
@@ -547,6 +567,8 @@ function formatFecha(iso) {
   return d.toLocaleDateString('es-CO', {day:'2-digit', month:'short'});
 }
 
+let _todosAlumnos = [];
+
 async function cargarAlumnos() {
   const tbody = document.getElementById('tabla-body');
   tbody.innerHTML = '<tr><td colspan="8" class="empty-state">Cargando...</td></tr>';
@@ -559,46 +581,92 @@ async function cargarAlumnos() {
       return;
     }
 
-    // Stats rápidos
+    _todosAlumnos = data;
+
+    // Stats rápidos (sobre todos, sin filtro)
     const total = data.length;
     const activos = data.filter(t => t.activo).length;
     const completaron = data.filter(t => (t.nivel_actual || 0) >= 3).length;
     const enProgreso = data.filter(t => (t.nivel_actual || 0) > 0 && (t.nivel_actual || 0) < 3).length;
 
     document.getElementById('resumen-stats').innerHTML = `
-      <div class="stat-card"><div class="stat-num">${total}</div><div class="stat-label">Total alumnos</div></div>
-      <div class="stat-card"><div class="stat-num" style="color:var(--green)">${completaron}</div><div class="stat-label">Completaron</div></div>
-      <div class="stat-card"><div class="stat-num" style="color:var(--accent)">${enProgreso}</div><div class="stat-label">En progreso</div></div>
-      <div class="stat-card"><div class="stat-num" style="color:var(--text-muted)">${total - activos}</div><div class="stat-label">Inactivos</div></div>
+      <div class="stat-card" style="cursor:pointer" onclick="setFiltro('todos','todos')">
+        <div class="stat-num">${total}</div><div class="stat-label">Total</div>
+      </div>
+      <div class="stat-card" style="cursor:pointer" onclick="setFiltro('activo','todos')">
+        <div class="stat-num" style="color:var(--accent)">${activos}</div><div class="stat-label">Activos</div>
+      </div>
+      <div class="stat-card" style="cursor:pointer" onclick="setFiltro('activo','3')">
+        <div class="stat-num" style="color:var(--green)">${completaron}</div><div class="stat-label">Completaron</div>
+      </div>
+      <div class="stat-card" style="cursor:pointer" onclick="setFiltro('activo','1')">
+        <div class="stat-num" style="color:var(--amber)">${enProgreso}</div><div class="stat-label">En progreso</div>
+      </div>
+      <div class="stat-card" style="cursor:pointer" onclick="setFiltro('inactivo','todos')">
+        <div class="stat-num" style="color:var(--text-muted)">${total - activos}</div><div class="stat-label">Inactivos</div>
+      </div>
     `;
 
-    tbody.innerHTML = data.map(t => {
-      const nombre = t.alumnos?.nombre || '—';
-      const activo = t.activo;
-      const nivel = Math.min(t.nivel_actual || 0, 3);
-      return `
-        <tr>
-          <td class="td-nombre">${nombre}</td>
-          <td class="td-token">${t.token}</td>
-          ${scoreCell(t.score_nivel_0)}
-          ${scoreCell(t.score_nivel_1)}
-          ${scoreCell(t.score_nivel_2)}
-          <td class="td-fecha">${formatFecha(t.ultimo_acceso)}</td>
-          <td>
-            <span class="activo-dot ${activo ? 'activo-si' : 'activo-no'}"></span>
-            ${activo ? 'Activo' : 'Inactivo'}
-          </td>
-          <td>
-            <button class="btn-toggle ${activo ? '' : 'reactivar'}"
-              onclick="toggleToken('${t.id}', ${activo})">
-              ${activo ? 'Desactivar' : 'Reactivar'}
-            </button>
-          </td>
-        </tr>`;
-    }).join('');
+    aplicarFiltros();
+
   } catch(e) {
     tbody.innerHTML = '<tr><td colspan="8" class="empty-state">Error cargando datos.</td></tr>';
   }
+}
+
+function setFiltro(estado, nivel) {
+  document.getElementById('filtro-estado').value = estado;
+  document.getElementById('filtro-nivel').value = nivel;
+  document.getElementById('filtro-buscar').value = '';
+  aplicarFiltros();
+}
+
+function aplicarFiltros() {
+  const buscar = document.getElementById('filtro-buscar').value.toLowerCase().trim();
+  const estado = document.getElementById('filtro-estado').value;
+  const nivel = document.getElementById('filtro-nivel').value;
+  const tbody = document.getElementById('tabla-body');
+
+  let filtrados = _todosAlumnos.filter(t => {
+    const nombre = (t.alumnos?.nombre || '').toLowerCase();
+    const token = (t.token || '').toLowerCase();
+    const nivelActual = Math.min(t.nivel_actual || 0, 3);
+
+    if (buscar && !nombre.includes(buscar) && !token.includes(buscar)) return false;
+    if (estado === 'activo' && !t.activo) return false;
+    if (estado === 'inactivo' && t.activo) return false;
+    if (nivel !== 'todos' && nivelActual !== parseInt(nivel)) return false;
+    return true;
+  });
+
+  if (filtrados.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="8" class="empty-state">No hay alumnos que coincidan con los filtros.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = filtrados.map(t => {
+    const nombre = t.alumnos?.nombre || '—';
+    const activo = t.activo;
+    return `
+      <tr style="${!activo ? 'opacity:0.5;' : ''}">
+        <td class="td-nombre">${nombre}</td>
+        <td class="td-token">${t.token}</td>
+        ${scoreCell(t.score_nivel_0)}
+        ${scoreCell(t.score_nivel_1)}
+        ${scoreCell(t.score_nivel_2)}
+        <td class="td-fecha">${formatFecha(t.ultimo_acceso)}</td>
+        <td>
+          <span class="activo-dot ${activo ? 'activo-si' : 'activo-no'}"></span>
+          ${activo ? 'Activo' : 'Inactivo'}
+        </td>
+        <td>
+          <button class="btn-toggle ${activo ? '' : 'reactivar'}"
+            onclick="toggleToken('${t.id}', ${activo})">
+            ${activo ? 'Desactivar' : 'Reactivar'}
+          </button>
+        </td>
+      </tr>`;
+  }).join('');
 }
 
 async function toggleToken(id, activo) {
