@@ -164,14 +164,16 @@
     line-height: 1.6; position: relative;
   }
   .msg-template strong { color: var(--text); }
-  .btn-copy-msg {
-    margin-top: 8px; padding: 6px 14px;
-    background: var(--surface); color: var(--text-muted);
-    border: 1px solid var(--border); border-radius: 8px;
-    font-family: var(--font); font-size: 12px;
+  .btn-whatsapp {
+    margin-top: 8px; padding: 10px 16px;
+    background: #25D366; color: white;
+    border: none; border-radius: 8px;
+    font-family: var(--font); font-size: 14px; font-weight: 500;
     cursor: pointer; transition: background 0.2s;
+    display: flex; align-items: center; gap: 8px; width: 100%;
+    justify-content: center;
   }
-  .btn-copy-msg:hover { background: var(--surface2); color: var(--text); }
+  .btn-whatsapp:hover { background: #1da851; }
 
   /* TABLA */
   .table-header {
@@ -282,16 +284,12 @@
         <input id="inp-nombre" type="text" placeholder="Ej: María García" autocomplete="off">
       </div>
       <div class="form-group">
-        <label>Email (opcional)</label>
-        <input id="inp-email" type="email" placeholder="maria@email.com">
+        <label>WhatsApp (con indicativo)</label>
+        <input id="inp-tel" type="tel" placeholder="573167511797">
       </div>
     </div>
     <div class="form-row">
-      <div class="form-group">
-        <label>Teléfono (opcional)</label>
-        <input id="inp-tel" type="tel" placeholder="+57 300 000 0000">
-      </div>
-      <div class="form-group">
+      <div class="form-group full">
         <label>Acceso a niveles</label>
         <select id="inp-nivel">
           <option value="0">Solo nivel inicial</option>
@@ -315,7 +313,10 @@
       <button class="btn-copy" onclick="copiarToken()">Copiar código</button>
     </div>
     <div class="msg-template" id="msg-template"></div>
-    <button class="btn-copy-msg" onclick="copiarMensaje()">Copiar mensaje completo</button>
+    <button class="btn-whatsapp" id="btn-whatsapp" onclick="enviarWhatsApp()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+      Enviar por WhatsApp
+    </button>
   </div>
 
   <!-- TABLA -->
@@ -418,10 +419,11 @@ async function generarAcceso() {
 
   try {
     // 1. Crear alumno
+    const tel = document.getElementById('inp-tel').value.trim().replace(/[^0-9]/g, '');
     const alumnoResp = await sbPost('alumnos', {
       nombre,
-      email: document.getElementById('inp-email').value.trim() || null,
-      telefono: document.getElementById('inp-tel').value.trim() || null
+      email: null,
+      telefono: tel || null
     });
 
     if (!alumnoResp || !alumnoResp[0]?.id) throw new Error('Error creando alumno');
@@ -441,19 +443,29 @@ async function generarAcceso() {
     });
 
     // 4. Mostrar resultado
+    const telNum = document.getElementById('inp-tel').value.trim().replace(/[^0-9]/g, '');
     document.getElementById('res-nombre').textContent = nombre;
     document.getElementById('res-token').textContent = token;
 
     const msg = `Hola ${nombre.split(' ')[0]} 👋\n\nTu acceso al Simulador de Tránsito está listo.\n\n🔗 Enlace: ${SIMULADOR_URL}\n🔑 Tu código: ${token}\n\nIngresa el código exactamente como aparece. ¡Éxitos!`;
     document.getElementById('msg-template').innerHTML = msg.replace(/\n/g, '<br>');
     document.getElementById('msg-template').dataset.raw = msg;
+    document.getElementById('msg-template').dataset.tel = telNum;
+
+    const btnWA = document.getElementById('btn-whatsapp');
+    if (telNum) {
+      btnWA.style.display = 'flex';
+      btnWA.dataset.tel = telNum;
+      btnWA.dataset.msg = msg;
+    } else {
+      btnWA.style.display = 'none';
+    }
 
     document.getElementById('result-box').classList.add('show');
     document.getElementById('result-box').scrollIntoView({ behavior: 'smooth' });
 
     // Limpiar form
     document.getElementById('inp-nombre').value = '';
-    document.getElementById('inp-email').value = '';
     document.getElementById('inp-tel').value = '';
 
     // Recargar tabla
@@ -475,12 +487,12 @@ function copiarToken() {
   setTimeout(() => btn.textContent = 'Copiar código', 2000);
 }
 
-function copiarMensaje() {
-  const msg = document.getElementById('msg-template').dataset.raw;
-  navigator.clipboard.writeText(msg);
-  const btn = event.target;
-  btn.textContent = '¡Mensaje copiado!';
-  setTimeout(() => btn.textContent = 'Copiar mensaje completo', 2000);
+function enviarWhatsApp() {
+  const btn = document.getElementById('btn-whatsapp');
+  const tel = btn.dataset.tel;
+  const msg = btn.dataset.msg;
+  const url = `https://wa.me/${tel}?text=${encodeURIComponent(msg)}`;
+  window.open(url, '_blank');
 }
 
 const NIVELES = ['Inicial', 'Práctica', 'Final', 'Completo'];
