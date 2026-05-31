@@ -323,7 +323,7 @@
       onkeydown="if(event.key==='Enter') document.getElementById('login-pass').focus()">
     <input type="password" id="login-pass" placeholder="Contraseña"
       onkeydown="if(event.key==='Enter') verificarLogin()">
-    <button class="btn" onclick="verificarLogin()" style="width:100%;margin-top:4px;">
+    <button onclick="verificarLogin()" style="width:100%;margin-top:4px;padding:12px;border-radius:10px;border:none;background:linear-gradient(135deg,#3b82f6,#6366f1);color:white;font-size:15px;font-weight:600;font-family:var(--font);cursor:pointer;letter-spacing:0.3px;transition:opacity 0.2s;" onmouseover="this.style.opacity='0.88'" onmouseout="this.style.opacity='1'">
       Ingresar →
     </button>
     <div class="login-err" id="login-err"></div>
@@ -750,8 +750,8 @@ function toggleToken2(el, token) {
 }
 
 // ── LOGIN ──
-const ADMIN_USER = 'ceamaserati';
-const ADMIN_PASS = 'maserati2025';
+const ADMIN_USER = 'maycolmartinezc';
+const ADMIN_PASS = 'S1mul4*';
 
 function verificarLogin() {
   const user = document.getElementById('login-user').value.trim();
