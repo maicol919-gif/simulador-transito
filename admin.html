@@ -277,10 +277,60 @@
     th:nth-child(3), td:nth-child(3),
     th:nth-child(5), td:nth-child(5) { display: none; }
   }
+
+  /* ── LOGIN ── */
+  #login-screen {
+    position: fixed; inset: 0;
+    background: var(--bg);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 999;
+  }
+  .login-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 2.5rem 2rem;
+    width: 100%; max-width: 360px;
+    text-align: center;
+  }
+  .login-box h2 { font-size: 20px; margin-bottom: 6px; }
+  .login-box p { font-size: 13px; color: var(--text-muted); margin-bottom: 24px; }
+  .login-box input {
+    width: 100%; padding: 11px 14px; margin-bottom: 12px;
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 10px; color: var(--text); font-size: 14px;
+    font-family: var(--font); outline: none;
+  }
+  .login-box input:focus { border-color: var(--accent); }
+  .login-err { font-size: 13px; color: var(--red); margin-top: 8px; min-height: 18px; }
+
+  /* ── CÓDIGO OCULTO ── */
+  .td-token { font-family: var(--mono); font-size: 13px; letter-spacing: 1px; }
+  .token-hidden { color: var(--text-muted); letter-spacing: 3px; cursor: pointer; user-select: none; }
+  .token-hidden:hover { color: var(--accent); }
+  .token-revealed { color: var(--accent); cursor: pointer; }
 </style>
 </head>
 <body>
-<div class="container">
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="login-box">
+    <div style="font-size:32px;margin-bottom:12px;">🔐</div>
+    <h2>Panel Administrativo</h2>
+    <p>Ingresa tus credenciales para continuar</p>
+    <input type="text" id="login-user" placeholder="Usuario" autocomplete="off"
+      onkeydown="if(event.key==='Enter') document.getElementById('login-pass').focus()">
+    <input type="password" id="login-pass" placeholder="Contraseña"
+      onkeydown="if(event.key==='Enter') verificarLogin()">
+    <button class="btn" onclick="verificarLogin()" style="width:100%;margin-top:4px;">
+      Ingresar →
+    </button>
+    <div class="login-err" id="login-err"></div>
+  </div>
+</div>
+
+<div class="container" id="admin-content" style="display:none;">
 
   <div class="top-bar">
     <div class="brand">
@@ -650,7 +700,9 @@ function aplicarFiltros() {
     return `
       <tr style="${!activo ? 'opacity:0.5;' : ''}">
         <td class="td-nombre">${nombre}</td>
-        <td class="td-token">${t.token}</td>
+        <td class="td-token">
+          <span class="token-hidden" title="Clic para revelar" onclick="toggleToken2(this,'${t.token}')">••••-••••</span>
+        </td>
         ${scoreCell(t.score_nivel_0)}
         ${scoreCell(t.score_nivel_1)}
         ${scoreCell(t.score_nivel_2)}
@@ -674,9 +726,54 @@ async function toggleToken(id, activo) {
   cargarAlumnos();
 }
 
-// Cargar al inicio
-cargarAlumnos();
+function toggleToken2(el, token) {
+  if (el.classList.contains('token-revealed')) {
+    el.textContent = '••••-••••';
+    el.classList.remove('token-revealed');
+    el.classList.add('token-hidden');
+    el.title = 'Clic para revelar';
+  } else {
+    el.textContent = token;
+    el.classList.remove('token-hidden');
+    el.classList.add('token-revealed');
+    el.title = 'Clic para ocultar';
+    // Auto-ocultar después de 10 segundos
+    setTimeout(() => {
+      if (el.classList.contains('token-revealed')) {
+        el.textContent = '••••-••••';
+        el.classList.remove('token-revealed');
+        el.classList.add('token-hidden');
+        el.title = 'Clic para revelar';
+      }
+    }, 10000);
+  }
+}
+
+// ── LOGIN ──
+const ADMIN_USER = 'ceamaserati';
+const ADMIN_PASS = 'maserati2025';
+
+function verificarLogin() {
+  const user = document.getElementById('login-user').value.trim();
+  const pass = document.getElementById('login-pass').value;
+  const err  = document.getElementById('login-err');
+
+  if (user === ADMIN_USER && pass === ADMIN_PASS) {
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('admin-content').style.display = 'block';
+    cargarAlumnos();
+  } else {
+    err.textContent = 'Usuario o contraseña incorrectos.';
+    document.getElementById('login-pass').value = '';
+    document.getElementById('login-pass').focus();
+    setTimeout(() => err.textContent = '', 3000);
+  }
+}
+
+// Foco automático al cargar
+document.getElementById('login-user').focus();
 </script>
+</div><!-- /admin-content -->
 </body>
 </html>
 
