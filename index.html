@@ -680,18 +680,18 @@ function renderPregunta() {
   document.getElementById('q-text').textContent = q.pregunta;
 
   // Imagen en el enunciado (si existe)
-  let imgEl = document.getElementById('q-imagen');
+  const _oldImg = document.getElementById('q-imagen');
+  if (_oldImg) _oldImg.remove();
   if (q.imagen_url) {
-    if (!imgEl) {
-      imgEl = document.createElement('div');
-      imgEl.id = 'q-imagen';
-      imgEl.style.cssText = 'text-align:center;margin:12px 0 4px;';
-      document.getElementById('q-text').insertAdjacentElement('afterend', imgEl);
-    }
-    imgEl.innerHTML = `<img src="${q.imagen_url}" alt="Señal de tránsito"
-      style="max-width:160px;max-height:160px;border-radius:10px;border:1px solid var(--border);background:#fff;padding:8px;">`;
-  } else if (imgEl) {
-    imgEl.innerHTML = '';
+    const _imgWrap = document.createElement('div');
+    _imgWrap.id = 'q-imagen';
+    _imgWrap.style.cssText = 'text-align:center;margin:14px 0 6px;';
+    const _img = document.createElement('img');
+    _img.src = q.imagen_url;
+    _img.alt = 'Señal de tránsito';
+    _img.style.cssText = 'max-width:160px;max-height:160px;border-radius:10px;border:1px solid rgba(255,255,255,0.08);background:#fff;padding:8px;display:inline-block;';
+    _imgWrap.appendChild(_img);
+    document.getElementById('q-text').insertAdjacentElement('afterend', _imgWrap);
   }
 
   const letras = ['A', 'B', 'C', 'D'];
