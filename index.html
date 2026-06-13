@@ -814,7 +814,7 @@ async function mostrarResultado() {
 
   const eraFinalRepetido = state.scores[2] !== null && state.scores[2] >= MIN_PASS && state.nivelActual === 2;
 
-  if (aprobado) state.nivelActual = Math.min(state.nivelActual + 1, 3);
+  if (aprobado && !(MODO_PRUEBA && state.nivelActual >= 1)) state.nivelActual = Math.min(state.nivelActual + 1, 3);
 
   document.getElementById('r-icon').textContent = aprobado ? '🎉' : '😔';
   document.getElementById('r-pct').textContent = pct + '%';
