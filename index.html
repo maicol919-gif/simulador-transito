@@ -460,6 +460,22 @@ function getDeviceId() {
 const DEVICE_ID = getDeviceId();
 
 // ═══════════════════════════════════════
+// MODO PRUEBA (sin token, directo a nv1)
+// ═══════════════════════════════════════
+const MODO_PRUEBA = new URLSearchParams(window.location.search).get('modo') === 'prueba';
+if (MODO_PRUEBA) {
+  window.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('s-login').classList.remove('active');
+    document.getElementById('s-hub').classList.add('active');
+    state.tokenData = { id: null, nivel_actual: 1, score_nivel_0: 100, score_nivel_1: null, score_nivel_2: null, intentos_nivel_1: 0 };
+    state.alumnoNombre = 'Estudiante';
+    state.nivelActual = 1;
+    state.scores = [100, null, null];
+    renderHub();
+  });
+}
+
+// ═══════════════════════════════════════
 // ESTADO
 // ═══════════════════════════════════════
 let state = {
@@ -776,26 +792,26 @@ async function mostrarResultado() {
 
   state.scores[state.nivelActual] = pct;
 
-  // Guardar en Supabase
+  // Guardar en Supabase (omitir en modo prueba)
   const campo = `score_nivel_${state.nivelActual}`;
   const intentoCampo = `intentos_nivel_${state.nivelActual}`;
-  const intentosActuales = state.tokenData[intentoCampo] || 0;
-
-  await sbPatch('tokens', `id=eq.${state.tokenData.id}`, {
-    [campo]: pct,
-    [intentoCampo]: intentosActuales + 1,
-    nivel_actual: aprobado ? Math.max(state.nivelActual + 1, state.tokenData.nivel_actual || 0) : state.nivelActual,
-    ultimo_acceso: new Date().toISOString()
-  });
-
-  await sbPost('resultados', {
-    token_id: state.tokenData.id,
-    nivel: state.nivelActual,
-    score: pct,
-    total_preguntas: total,
-    correctas: state.correctas,
-    aprobado
-  });
+  const intentosActuales = (state.tokenData[intentoCampo] || 0);
+  if (!MODO_PRUEBA) {
+    await sbPatch('tokens', `id=eq.${state.tokenData.id}`, {
+      [campo]: pct,
+      [intentoCampo]: intentosActuales + 1,
+      nivel_actual: aprobado ? Math.max(state.nivelActual + 1, state.tokenData.nivel_actual || 0) : state.nivelActual,
+      ultimo_acceso: new Date().toISOString()
+    });
+    await sbPost('resultados', {
+      token_id: state.tokenData.id,
+      nivel: state.nivelActual,
+      score: pct,
+      total_preguntas: total,
+      correctas: state.correctas,
+      aprobado
+    });
+  }
 
   const eraFinalRepetido = state.scores[2] !== null && state.scores[2] >= MIN_PASS && state.nivelActual === 2;
 
@@ -904,4 +920,5 @@ function mostrarFinal() {
 </script>
 </body>
 </html>
+
 
