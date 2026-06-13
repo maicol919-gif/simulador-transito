@@ -465,10 +465,10 @@ const DEVICE_ID = getDeviceId();
 const MODO_PRUEBA = new URLSearchParams(window.location.search).get('modo') === 'prueba';
 if (MODO_PRUEBA) {
   document.addEventListener('DOMContentLoaded', () => {
-    state.tokenData = { id: null, nivel_actual: 1, score_nivel_0: 100, score_nivel_1: null, score_nivel_2: null, intentos_nivel_1: 0 };
+    state.tokenData = { id: null, nivel_actual: 0, score_nivel_0: null, score_nivel_1: null, score_nivel_2: null, intentos_nivel_0: 0 };
     state.alumnoNombre = 'Estudiante';
-    state.nivelActual = 1;
-    state.scores = [100, null, null];
+    state.nivelActual = 0;
+    state.scores = [null, null, null];
     cargarPantallaLevels();
     mostrar('levels');
   });
