@@ -464,14 +464,13 @@ const DEVICE_ID = getDeviceId();
 // ═══════════════════════════════════════
 const MODO_PRUEBA = new URLSearchParams(window.location.search).get('modo') === 'prueba';
 if (MODO_PRUEBA) {
-  window.addEventListener('DOMContentLoaded', () => {
-    document.getElementById('s-login').classList.remove('active');
-    document.getElementById('s-hub').classList.add('active');
+  document.addEventListener('DOMContentLoaded', () => {
     state.tokenData = { id: null, nivel_actual: 1, score_nivel_0: 100, score_nivel_1: null, score_nivel_2: null, intentos_nivel_1: 0 };
     state.alumnoNombre = 'Estudiante';
     state.nivelActual = 1;
     state.scores = [100, null, null];
-    renderHub();
+    cargarPantallaLevels();
+    mostrar('levels');
   });
 }
 
