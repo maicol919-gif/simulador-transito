@@ -716,6 +716,10 @@ function aplicarFiltros() {
             onclick="toggleToken('${t.id}', ${activo})">
             ${activo ? 'Desactivar' : 'Reactivar'}
           </button>
+          <button class="btn-toggle ${(t.max_devices >= 2) ? 'reactivar' : ''}"
+            onclick="toggleDispositivos('${t.id}', ${t.max_devices >= 2})">
+            ${(t.max_devices >= 2) ? '2 disp. ✓' : 'Permitir 2do disp.'}
+          </button>
         </td>
       </tr>`;
   }).join('');
@@ -723,6 +727,14 @@ function aplicarFiltros() {
 
 async function toggleToken(id, activo) {
   await sbPatch('tokens', `id=eq.${id}`, { activo: !activo });
+  cargarAlumnos();
+}
+
+async function toggleDispositivos(id, activo2) {
+  const updates = activo2
+    ? { max_devices: 1, device_id_2: null }
+    : { max_devices: 2 };
+  await sbPatch('tokens', `id=eq.${id}`, updates);
   cargarAlumnos();
 }
 

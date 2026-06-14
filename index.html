@@ -564,7 +564,10 @@ async function validarToken() {
       err.textContent = 'Este código ha sido desactivado. Contacta al instructor.';
     } else if (rows[0].expira_at && new Date(rows[0].expira_at) < new Date()) {
       err.textContent = 'Tu acceso ha expirado. Contacta al instructor para renovarlo.';
-    } else if (rows[0].device_id && rows[0].device_id !== DEVICE_ID) {
+    } else if (
+      rows[0].device_id && rows[0].device_id !== DEVICE_ID &&
+      !((rows[0].max_devices >= 2) && (!rows[0].device_id_2 || rows[0].device_id_2 === DEVICE_ID))
+    ) {
       err.textContent = 'Este código ya está vinculado a otro dispositivo. Contacta al instructor.';
     } else {
       // Vincular dispositivo si es la primera vez
@@ -572,7 +575,11 @@ async function validarToken() {
         ultimo_acceso: new Date().toISOString()
       };
       if (!rows[0].primer_acceso) updates.primer_acceso = new Date().toISOString();
-      if (!rows[0].device_id) updates.device_id = DEVICE_ID;
+      if (!rows[0].device_id) {
+        updates.device_id = DEVICE_ID;
+      } else if (rows[0].device_id !== DEVICE_ID && !rows[0].device_id_2) {
+        updates.device_id_2 = DEVICE_ID;
+      }
 
       state.tokenData = rows[0];
       state.alumnoNombre = rows[0].alumnos?.nombre || 'Alumno';
