@@ -462,7 +462,7 @@ const DEVICE_ID = getDeviceId();
 // ═══════════════════════════════════════
 // MODO PRUEBA (sin token, directo a nv1)
 // ═══════════════════════════════════════
-const MODO_PRUEBA = new URLSearchParams(window.location.search).get('modo') === 'prueba';
+const MODO_PRUEBA = false;
 if (MODO_PRUEBA) {
   document.addEventListener('DOMContentLoaded', () => {
     state.tokenData = { id: null, nivel_actual: 0, score_nivel_0: null, score_nivel_1: null, score_nivel_2: null, intentos_nivel_0: 0 };
