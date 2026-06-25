@@ -747,7 +747,7 @@ async function toggleSinBloqueo(id, activo) {
   cargarAlumnos();
 }
 
-
+function toggleToken2(el, token) {
   if (el.classList.contains('token-revealed')) {
     el.textContent = '••••-••••';
     el.classList.remove('token-revealed');
