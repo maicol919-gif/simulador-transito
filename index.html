@@ -565,6 +565,7 @@ async function validarToken() {
     } else if (rows[0].expira_at && new Date(rows[0].expira_at) < new Date()) {
       err.textContent = 'Tu acceso ha expirado. Contacta al instructor para renovarlo.';
     } else if (
+      !rows[0].sin_bloqueo_dispositivo &&
       rows[0].device_id && rows[0].device_id !== DEVICE_ID &&
       !((rows[0].max_devices >= 2) && (!rows[0].device_id_2 || rows[0].device_id_2 === DEVICE_ID))
     ) {
@@ -926,5 +927,6 @@ function mostrarFinal() {
 </script>
 </body>
 </html>
+
 
 
