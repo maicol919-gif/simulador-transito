@@ -720,6 +720,10 @@ function aplicarFiltros() {
             onclick="toggleDispositivos('${t.id}', ${t.max_devices >= 2})">
             ${(t.max_devices >= 2) ? '2 disp. ✓' : 'Permitir 2do disp.'}
           </button>
+          <button class="btn-toggle ${t.sin_bloqueo_dispositivo ? 'reactivar' : ''}"
+            onclick="toggleSinBloqueo('${t.id}', ${!!t.sin_bloqueo_dispositivo})">
+            ${t.sin_bloqueo_dispositivo ? 'Sin bloqueo ✓' : 'Sin bloqueo'}
+          </button>
         </td>
       </tr>`;
   }).join('');
@@ -738,7 +742,12 @@ async function toggleDispositivos(id, activo2) {
   cargarAlumnos();
 }
 
-function toggleToken2(el, token) {
+async function toggleSinBloqueo(id, activo) {
+  await sbPatch('tokens', `id=eq.${id}`, { sin_bloqueo_dispositivo: !activo });
+  cargarAlumnos();
+}
+
+
   if (el.classList.contains('token-revealed')) {
     el.textContent = '••••-••••';
     el.classList.remove('token-revealed');
@@ -788,4 +797,5 @@ document.getElementById('login-user').focus();
 </div><!-- /admin-content -->
 </body>
 </html>
+
 
